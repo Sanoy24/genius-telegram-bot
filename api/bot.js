@@ -160,7 +160,7 @@ bot.on("callback_query", async (callbackQuery) => {
 });
 
 // Handle the webhook updates from Telegram
-app.post("/webhook", (req, res) => {
+app.post("/api/bot/webhook", (req, res) => {
 	const update = req.body; // Get the update from the request body
 	bot.processUpdate(update); // Process the update using the Telegram bot
 	res.sendStatus(200); // Respond with a 200 OK

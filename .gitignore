@@ -9,3 +9,4 @@ logs
 .env
 
 # Other files you want to ignore
+.vercel
