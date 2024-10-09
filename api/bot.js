@@ -14,7 +14,18 @@ app.use(express.json());
 // Set the webhook URL
 const webhookUrl = `${process.env.WEBHOOK_URL}webhook`;
 // const webhookUrl = `https://rntpf-196-188-34-240.a.free.pinggy.link/webhook`;  // for local test
-bot.setWebHook(webhookUrl);
+// bot.setWebHook(webhookUrl);
+const setWebhook = async () => {
+	try {
+		await bot.setWebHook(webhookUrl);
+		console.log("Webhook set successfully.");
+	} catch (error) {
+		console.error("Error setting webhook:", error);
+	}
+};
+
+// Call setWebhook when the app starts
+setWebhook();
 
 // Map to store song results with page and song information
 const songUrlMap = {};
