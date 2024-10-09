@@ -12,7 +12,7 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 app.use(express.json());
 
 // Set the webhook URL
-const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`; // Ensure WEBHOOK_URL is set in your environment variables
+const webhookUrl = `${process.env.WEBHOOK_URL}webhook`; // Ensure WEBHOOK_URL is set in your environment variables
 bot.setWebHook(webhookUrl);
 
 // Map to store song results with page and song information
