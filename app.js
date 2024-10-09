@@ -132,7 +132,6 @@ bot.on("callback_query", async (callbackQuery) => {
 	}
 });
 
-// Start Express server
 app.get("/", async (req, res) => {
 	res.send("This is a starting point...");
 });
