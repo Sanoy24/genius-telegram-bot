@@ -6,28 +6,28 @@ const fetchlyrics = require("../fetch_lyrics");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
 
 // Middleware to parse incoming JSON requests
 app.use(express.json());
 // 6n9yzeqsl9.loclx.io
 // Set the webhook URL
 // const webhookUrl = `${process.env.WEBHOOK_URL}webhook`;
-const webhookUrl = `${process.env.WEBHOOK_URL}api/bot/webhook`;
+// const webhookUrl = `${process.env.WEBHOOK_URL}api/bot/webhook`;
 
 // const webhookUrl = `https://rnflq-102-218-50-72.a.free.pinggy.link/api/bot/webhook`; // for local test
 // bot.setWebHook(webhookUrl);
-const setWebhook = async () => {
-	try {
-		await bot.setWebHook(webhookUrl);
-		console.log("Webhook set successfully.");
-	} catch (error) {
-		console.error("Error setting webhook:", error);
-	}
-};
+// const setWebhook = async () => {
+// 	try {
+// 		await bot.setWebHook(webhookUrl);
+// 		console.log("Webhook set successfully.");
+// 	} catch (error) {
+// 		console.error("Error setting webhook:", error);
+// 	}
+// };
 
 // Call setWebhook when the app starts
-setWebhook();
+// setWebhook();
 
 // Map to store song results with page and song information
 const songUrlMap = {};
@@ -141,11 +141,6 @@ function sendPaginatedSongs(chatId, page) {
 	});
 }
 
-// Handle callback queries when a user selects a song or navigates pages
-
-// Handle callback queries when a user selects a song or navigates pages
-// Handle callback queries when a user selects a song or navigates pages
-// Handle callback queries when a user selects a song or navigates pages
 bot.on("callback_query", async (callbackQuery) => {
 	const chatId = callbackQuery.message.chat.id;
 	const callbackData = callbackQuery.data;
@@ -199,11 +194,11 @@ bot.on("callback_query", async (callbackQuery) => {
 });
 
 // Handle the webhook updates from Telegram
-app.post("/api/bot/webhook", (req, res) => {
-	const update = req.body; // Get the update from the request body
-	bot.processUpdate(update); // Process the update using the Telegram bot
-	res.sendStatus(200); // Respond with a 200 OK
-});
+// app.post("/api/bot/webhook", (req, res) => {
+// 	const update = req.body; // Get the update from the request body
+// 	bot.processUpdate(update); // Process the update using the Telegram bot
+// 	res.sendStatus(200); // Respond with a 200 OK
+// });
 
 // Starting route for the Express app
 app.get("/", async (req, res) => {
