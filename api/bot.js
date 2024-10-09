@@ -15,7 +15,7 @@ app.use(express.json());
 // const webhookUrl = `${process.env.WEBHOOK_URL}webhook`;
 const webhookUrl = `${process.env.WEBHOOK_URL}api/bot/webhook`;
 
-// const webhookUrl = `https://rntpf-196-188-34-240.a.free.pinggy.link/webhook`;  // for local test
+// const webhookUrl = `https://rnflq-102-218-50-72.a.free.pinggy.link/api/bot/webhook`; // for local test
 // bot.setWebHook(webhookUrl);
 const setWebhook = async () => {
 	try {
@@ -74,7 +74,10 @@ bot.on("message", async (msg) => {
 			// Store results and send the first page
 			if (hits.length > 0) {
 				songUrlMap[chatId] = hits; // Store all hits for this chat
+				console.log(songUrlMap[chatId]);
 				sendPaginatedSongs(chatId, 0); // Send the first page (page 0)
+				console.log(songUrlMap);
+				console.log(hits);
 			} else {
 				bot.sendMessage(chatId, `Sorry, I couldn't find any matching songs.`);
 			}
@@ -88,6 +91,7 @@ bot.on("message", async (msg) => {
 });
 
 // Function to send a paginated list of songs
+// Function to send a paginated list of songs
 function sendPaginatedSongs(chatId, page) {
 	const hits = songUrlMap[chatId];
 	const totalPages = Math.ceil(hits.length / songsPerPage);
@@ -100,7 +104,10 @@ function sendPaginatedSongs(chatId, page) {
 	// Create inline keyboard options for the current page
 	const songOptions = songsOnPage.map((hit, index) => {
 		const songId = `song_${start + index}`;
-		songUrlMap[songId] = hit.result.url;
+		songUrlMap[songId] = {
+			url: hit.result.url, // Store the song URL
+			thumbnail: hit.result.song_art_image_url, // Store the song's thumbnail
+		};
 
 		return {
 			text: hit.result.full_title,
@@ -135,6 +142,10 @@ function sendPaginatedSongs(chatId, page) {
 }
 
 // Handle callback queries when a user selects a song or navigates pages
+
+// Handle callback queries when a user selects a song or navigates pages
+// Handle callback queries when a user selects a song or navigates pages
+// Handle callback queries when a user selects a song or navigates pages
 bot.on("callback_query", async (callbackQuery) => {
 	const chatId = callbackQuery.message.chat.id;
 	const callbackData = callbackQuery.data;
@@ -147,29 +158,42 @@ bot.on("callback_query", async (callbackQuery) => {
 		const page = parseInt(callbackData.split("_")[1], 10);
 		sendPaginatedSongs(chatId, page); // Send the corresponding page
 	} else if (callbackData.startsWith("song_")) {
-		// If callback data is for a song selection
 		const songId = callbackData;
-		const songUrl = songUrlMap[songId];
+		const songData = songUrlMap[songId];
 
-		if (songUrl) {
+		if (songData && songData.url) {
 			try {
-				bot.sendMessage(chatId, `Fetching lyrics...`);
+				// Send the "Fetching lyrics..." message and store its reference
+				const fetchingMessage = await bot.sendMessage(chatId, `Fetching lyrics...`);
 
 				// Fetch the lyrics for the selected song
-				const lyrics = await fetchlyrics.fetchLyrics(songUrl);
+				const lyrics = await fetchlyrics.fetchLyrics(songData.url);
 				const formattedLyrics = fetchlyrics.formatLyrics(lyrics);
 				const lyricParts = fetchlyrics.splitMessage(formattedLyrics);
 
-				// Send the lyrics in parts (due to Telegram message size limit)
+				// Send the song's thumbnail
+				if (songData.thumbnail) {
+					await bot.sendPhoto(chatId, songData.thumbnail, {
+						caption: "Here's the song thumbnail!",
+					});
+				}
+
+				// Send the lyrics in parts
 				for (const part of lyricParts) {
 					await bot.sendMessage(chatId, part, { parse_mode: "Markdown" });
 				}
+
+				// Delete the "Fetching lyrics..." message
+				await bot.deleteMessage(chatId, fetchingMessage.message_id);
 			} catch (error) {
 				console.error("Error fetching lyrics", error);
-				bot.sendMessage(chatId, `There was an error fetching the lyrics for this song.`);
+				await bot.sendMessage(
+					chatId,
+					`There was an error fetching the lyrics for this song.`,
+				);
 			}
 		} else {
-			bot.sendMessage(chatId, `Error: Invalid song selection.`);
+			await bot.sendMessage(chatId, `Error: Invalid song selection.`);
 		}
 	}
 });
@@ -187,8 +211,8 @@ app.get("/", async (req, res) => {
 });
 
 // Start the Express server
-// app.listen(PORT, () => {
-// 	console.log("App listening on port", PORT);
-// });
+app.listen(PORT, () => {
+	console.log("App listening on port", PORT);
+});
 
 module.exports = app;
