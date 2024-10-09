@@ -1,0 +1,19 @@
+{
+	"name": "genius-telegram-bot",
+	"version": "0.1.0",
+	"description": "this is telegram bot to get lyrics of music from genius api",
+	"main": "app.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node app.js"
+	},
+	"author": "Sanoy",
+	"license": "ISC",
+	"dependencies": {
+		"axios": "^1.7.7",
+		"cheerio": "^1.0.0",
+		"dotenv": "^16.4.5",
+		"express": "^4.21.1",
+		"node-telegram-bot-api": "^0.66.0"
+	}
+}
