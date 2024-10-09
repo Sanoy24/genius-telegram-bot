@@ -6,14 +6,14 @@ const fetchlyrics = require("./fetch_lyrics");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
 // Middleware to parse incoming JSON requests
 app.use(express.json());
 
 // Set the webhook URL
-// const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`; // Ensure WEBHOOK_URL is set in your environment variables
-// bot.setWebHook(webhookUrl);
+const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`; // Ensure WEBHOOK_URL is set in your environment variables
+bot.setWebHook(webhookUrl);
 
 // Map to store song results with page and song information
 const songUrlMap = {};
