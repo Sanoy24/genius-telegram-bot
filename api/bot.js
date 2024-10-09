@@ -12,7 +12,9 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 app.use(express.json());
 // 6n9yzeqsl9.loclx.io
 // Set the webhook URL
-const webhookUrl = `${process.env.WEBHOOK_URL}webhook`;
+// const webhookUrl = `${process.env.WEBHOOK_URL}webhook`;
+const webhookUrl = `${process.env.WEBHOOK_URL}api/bot/webhook`;
+
 // const webhookUrl = `https://rntpf-196-188-34-240.a.free.pinggy.link/webhook`;  // for local test
 // bot.setWebHook(webhookUrl);
 const setWebhook = async () => {
