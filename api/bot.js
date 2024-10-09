@@ -66,7 +66,7 @@ bot.on("message", async (msg) => {
 			const response = await axios.get(geniusApiUrl, {
 				headers: { Authorization: `Bearer ${process.env.GENIUS_API_TOKEN}` },
 				params: { q: songTitle },
-				timeout: 20000, // Increase the timeout to 20 seconds (20000ms)
+				json: true,
 			});
 
 			const hits = response.data.response.hits;
