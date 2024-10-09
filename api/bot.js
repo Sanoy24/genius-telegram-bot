@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const TelegramBot = require("node-telegram-bot-api");
-const fetchlyrics = require("./fetch_lyrics");
+const fetchlyrics = require("../fetch_lyrics");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -175,3 +175,5 @@ app.get("/", async (req, res) => {
 app.listen(PORT, () => {
 	console.log("App listening on port", PORT);
 });
+
+module.exports = app;
