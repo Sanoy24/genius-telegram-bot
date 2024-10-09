@@ -93,12 +93,10 @@ function sendPaginatedSongs(chatId, page) {
 }
 
 // Handle callback queries when a user selects a song or navigates pages
+// Handle callback queries when a user selects a song or navigates pages
 bot.on("callback_query", async (callbackQuery) => {
 	const chatId = callbackQuery.message.chat.id;
 	const callbackData = callbackQuery.data;
-
-	// Acknowledge the callback query to remove the button highlight
-	await bot.answerCallbackQuery(callbackQuery.id);
 
 	// If callback data is for pagination (e.g., "page_0", "page_1")
 	if (callbackData.startsWith("page_")) {
@@ -111,17 +109,23 @@ bot.on("callback_query", async (callbackQuery) => {
 
 		if (songUrl) {
 			try {
-				bot.sendMessage(chatId, `Fetching lyrics...`);
+				// Send fetching message and edit it to show lyrics
+				const fetchingMessage = await bot.sendMessage(chatId, `Fetching lyrics...`);
 
 				// Fetch the lyrics for the selected song
 				const lyrics = await fetchlyrics.fetchLyrics(songUrl);
 				const formattedLyrics = fetchlyrics.formatLyrics(lyrics);
 				const lyricParts = fetchlyrics.splitMessage(formattedLyrics);
 
-				// Send the lyrics in parts (due to Telegram message size limit)
-				for (const part of lyricParts) {
-					await bot.sendMessage(chatId, part, { parse_mode: "Markdown" });
-				}
+				// Edit the fetching message to show the actual lyrics
+				await bot.editMessageText(
+					`Lyrics for "${songUrl}":\n\n` + lyricParts.join("\n\n"),
+					{
+						chat_id: chatId,
+						message_id: fetchingMessage.message_id,
+						parse_mode: "Markdown",
+					},
+				);
 			} catch (error) {
 				console.error("Error fetching lyrics", error);
 				bot.sendMessage(chatId, `There was an error fetching the lyrics for this song.`);
