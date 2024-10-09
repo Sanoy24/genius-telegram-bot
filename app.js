@@ -10,9 +10,10 @@ const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
 // Middleware to parse incoming JSON requests
 app.use(express.json());
-
+// 6n9yzeqsl9.loclx.io
 // Set the webhook URL
-const webhookUrl = `${process.env.WEBHOOK_URL}webhook`; // Ensure WEBHOOK_URL is set in your environment variables
+const webhookUrl = `${process.env.WEBHOOK_URL}webhook`;
+// const webhookUrl = `https://rntpf-196-188-34-240.a.free.pinggy.link/webhook`;  // for local test
 bot.setWebHook(webhookUrl);
 
 // Map to store song results with page and song information
@@ -20,12 +21,31 @@ const songUrlMap = {};
 const songsPerPage = 5; // Number of songs per page
 
 // Genius API URL
+
 const geniusApiUrl = "https://api.genius.com/search";
+
+// on start command
+bot.onText(/\/start/, (msg) => {
+	const chatId = msg.chat.id;
+
+	// Log previous state if applicable
+	console.log(`Previous state for ${chatId}:`, songUrlMap[chatId]);
+
+	// Clear previous state
+	delete songUrlMap[chatId];
+
+	// Send welcome message
+	bot.sendMessage(chatId, "Welcome! Please provide a song title.");
+});
 
 // Handle Telegram messages from users
 bot.on("message", async (msg) => {
 	const chatId = msg.chat.id;
 	const songTitle = msg.text;
+
+	if (songTitle.startsWith("/")) {
+		return; // Ignore command messages in the generic message handler
+	}
 
 	if (songTitle) {
 		try {
