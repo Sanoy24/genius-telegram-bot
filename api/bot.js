@@ -172,8 +172,8 @@ app.get("/", async (req, res) => {
 });
 
 // Start the Express server
-app.listen(PORT, () => {
-	console.log("App listening on port", PORT);
-});
+// app.listen(PORT, () => {
+// 	console.log("App listening on port", PORT);
+// });
 
 module.exports = app;
