@@ -1,60 +1,73 @@
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
-const TelegramBot = require("node-telegram-bot-api");
+const { Telegraf } = require("telegraf");
 const fetchlyrics = require("../fetch_lyrics");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
 // Middleware to parse incoming JSON requests
 app.use(express.json());
-// 6n9yzeqsl9.loclx.io
-// Set the webhook URL
-// const webhookUrl = `${process.env.WEBHOOK_URL}webhook`;
-// const webhookUrl = `${process.env.WEBHOOK_URL}api/bot/webhook`;
 
-// const webhookUrl = `https://rnflq-102-218-50-72.a.free.pinggy.link/api/bot/webhook`; // for local test
-// bot.setWebHook(webhookUrl);
-// const setWebhook = async () => {
-// 	try {
-// 		await bot.setWebHook(webhookUrl);
-// 		console.log("Webhook set successfully.");
-// 	} catch (error) {
-// 		console.error("Error setting webhook:", error);
-// 	}
-// };
+// Set the webhook URL
+const webhookUrl = `https://rnjki-196-188-34-240.a.free.pinggy.link/api/bot/webhook`; // for local test
+
+bot.telegram.setWebhook(webhookUrl);
+app.post("/api/bot/webhook", (req, res) => {
+	bot.handleUpdate(req.body); // Process the update using Telegraf
+	res.sendStatus(200); // Respond with a 200 OK
+});
 
 // Call setWebhook when the app starts
-// setWebhook();
+const setWebhook = async () => {
+	try {
+		// Check if the webhook is already set
+		const webhookInfo = await bot.telegram.getWebhookInfo();
+		console.log(webhookInfo);
+		if (webhookInfo.url === webhookUrl) {
+			console.log("Webhook is already set.");
+			return;
+		}
+
+		// If the webhook is not set or needs to be updated, set it
+		await bot.telegram.setWebhook(webhookUrl);
+		console.log("Webhook set successfully.");
+	} catch (error) {
+		if (error.response && error.response.error_code === 429) {
+			const retryAfter = error.response.parameters.retry_after;
+			console.log(`Too many requests. Retrying in ${retryAfter} seconds...`);
+			setTimeout(setWebhook, retryAfter * 1000); // Retry after the specified delay
+		} else {
+			console.error("Error setting webhook:", error);
+		}
+	}
+};
 
 // Map to store song results with page and song information
 const songUrlMap = {};
 const songsPerPage = 5; // Number of songs per page
-
-// Genius API URL
-
 const geniusApiUrl = "https://api.genius.com/search";
 
-// on start command
-bot.onText(/\/start/, (msg) => {
-	const chatId = msg.chat.id;
+// /start command handler
+bot.start((ctx) => {
+	const chatId = ctx.chat.id;
 
 	// Log previous state if applicable
-	console.log(`Previous state for ${chatId}:`, songUrlMap[chatId]);
+	// console.log(`Previous state for ${chatId}:`, songUrlMap[chatId]);
 
 	// Clear previous state
 	delete songUrlMap[chatId];
 
 	// Send welcome message
-	bot.sendMessage(chatId, "Welcome! Please provide a song title.");
+	ctx.reply("Welcome! Please provide a song title.");
 });
 
-// Handle Telegram messages from users
-bot.on("message", async (msg) => {
-	const chatId = msg.chat.id;
-	const songTitle = msg.text;
+// Handle messages from users
+bot.on("text", async (ctx) => {
+	const chatId = ctx.chat.id;
+	const songTitle = ctx.message.text;
 
 	if (songTitle.startsWith("/")) {
 		return; // Ignore command messages in the generic message handler
@@ -74,25 +87,23 @@ bot.on("message", async (msg) => {
 			// Store results and send the first page
 			if (hits.length > 0) {
 				songUrlMap[chatId] = hits; // Store all hits for this chat
-				console.log(songUrlMap[chatId]);
-				sendPaginatedSongs(chatId, 0); // Send the first page (page 0)
-				console.log(songUrlMap);
-				console.log(hits);
+				// console.log(songUrlMap[chatId]);
+				sendPaginatedSongs(ctx, 0); // Send the first page (page 0)
 			} else {
-				bot.sendMessage(chatId, `Sorry, I couldn't find any matching songs.`);
+				ctx.reply(`Sorry, I couldn't find any matching songs.`);
 			}
 		} catch (error) {
-			console.error("Error fetching songs", error);
-			bot.sendMessage(chatId, `There was an error searching for the song "${songTitle}".`);
+			// console.error("Error fetching songs", error);
+			ctx.reply(`There was an error searching for the song "${songTitle}".`);
 		}
 	} else {
-		bot.sendMessage(chatId, "Please provide a song title.");
+		ctx.reply("Please provide a song title.");
 	}
 });
 
 // Function to send a paginated list of songs
-// Function to send a paginated list of songs
-function sendPaginatedSongs(chatId, page) {
+function sendPaginatedSongs(ctx, page) {
+	const chatId = ctx.chat.id;
 	const hits = songUrlMap[chatId];
 	const totalPages = Math.ceil(hits.length / songsPerPage);
 
@@ -124,34 +135,27 @@ function sendPaginatedSongs(chatId, page) {
 		paginationButtons.push({ text: "Next", callback_data: `page_${page + 1}` });
 	}
 
-	// Ensure pagination buttons are always sent
-	const paginationKeyboard = [];
-	if (paginationButtons.length > 0) {
-		paginationKeyboard.push(paginationButtons);
-	}
-
 	// Send the list of songs with pagination buttons
-	bot.sendMessage(chatId, `Please choose a song:`, {
+	ctx.reply("Please choose a song:", {
 		reply_markup: {
 			inline_keyboard: [
 				...songOptions.map((option) => [option]),
-				...paginationKeyboard, // Ensures pagination buttons appear correctly
+				paginationButtons.length > 0 ? paginationButtons : [], // Ensure pagination buttons appear correctly
 			],
 		},
 	});
 }
 
-bot.on("callback_query", async (callbackQuery) => {
-	const chatId = callbackQuery.message.chat.id;
-	const callbackData = callbackQuery.data;
+// Handle callback queries
+bot.on("callback_query", async (ctx) => {
+	const callbackData = ctx.callbackQuery.data;
 
 	// Acknowledge the callback query to remove the button highlight
-	await bot.answerCallbackQuery(callbackQuery.id);
+	await ctx.answerCbQuery();
 
-	// If callback data is for pagination (e.g., "page_0", "page_1")
 	if (callbackData.startsWith("page_")) {
 		const page = parseInt(callbackData.split("_")[1], 10);
-		sendPaginatedSongs(chatId, page); // Send the corresponding page
+		sendPaginatedSongs(ctx, page); // Send the corresponding page
 	} else if (callbackData.startsWith("song_")) {
 		const songId = callbackData;
 		const songData = songUrlMap[songId];
@@ -159,7 +163,7 @@ bot.on("callback_query", async (callbackQuery) => {
 		if (songData && songData.url) {
 			try {
 				// Send the "Fetching lyrics..." message and store its reference
-				const fetchingMessage = await bot.sendMessage(chatId, `Fetching lyrics...`);
+				const fetchingMessage = await ctx.reply("Fetching lyrics...");
 
 				// Fetch the lyrics for the selected song
 				const lyrics = await fetchlyrics.fetchLyrics(songData.url);
@@ -168,40 +172,30 @@ bot.on("callback_query", async (callbackQuery) => {
 
 				// Send the song's thumbnail
 				if (songData.thumbnail) {
-					await bot.sendPhoto(chatId, songData.thumbnail, {
+					await ctx.replyWithPhoto(songData.thumbnail, {
 						caption: "Here's the song thumbnail!",
 					});
 				}
 
 				// Send the lyrics in parts
 				for (const part of lyricParts) {
-					await bot.sendMessage(chatId, part, { parse_mode: "Markdown" });
+					await ctx.reply(part, { parse_mode: "Markdown" });
 				}
 
 				// Delete the "Fetching lyrics..." message
-				await bot.deleteMessage(chatId, fetchingMessage.message_id);
+				await ctx.telegram.deleteMessage(ctx.chat.id, fetchingMessage.message_id);
 			} catch (error) {
 				console.error("Error fetching lyrics", error);
-				await bot.sendMessage(
-					chatId,
-					`There was an error fetching the lyrics for this song.`,
-				);
+				await ctx.reply("There was an error fetching the lyrics for this song.");
 			}
 		} else {
-			await bot.sendMessage(chatId, `Error: Invalid song selection.`);
+			await ctx.reply("Error: Invalid song selection.");
 		}
 	}
 });
 
-// Handle the webhook updates from Telegram
-// app.post("/api/bot/webhook", (req, res) => {
-// 	const update = req.body; // Get the update from the request body
-// 	bot.processUpdate(update); // Process the update using the Telegram bot
-// 	res.sendStatus(200); // Respond with a 200 OK
-// });
-
 // Starting route for the Express app
-app.get("/", async (req, res) => {
+app.get("/", (req, res) => {
 	res.send("This is a starting point...");
 });
 
