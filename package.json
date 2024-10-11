@@ -1,7 +1,7 @@
 {
 	"name": "genius-telegram-bot",
-	"version": "0.1.0",
-	"description": "this is telegram bot to get lyrics of music from genius api",
+	"version": "1.0.0",
+	"description": "A Telegram bot that fetches song lyrics from the Genius API, providing interactive responses and pagination support.",
 	"main": "bot.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
@@ -9,10 +9,11 @@
 		"dev": "nodemon bot.js"
 	},
 	"author": "Sanoy",
-	"license": "ISC",
+	"license": "MIT",
+	"engines": {
+		"node": ">=16.0.0"
+	},
 	"dependencies": {
-		"@logtail/node": "^0.5.2",
-		"@logtail/winston": "^0.5.2",
 		"axios": "^1.7.7",
 		"cheerio": "^1.0.0",
 		"dotenv": "^16.4.5",
@@ -20,5 +21,32 @@
 		"nodemon": "^3.1.7",
 		"telegraf": "^4.16.3",
 		"winston": "^3.15.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/sanoy24/genius-telegram-bot"
+	},
+	"keywords": [
+		"telegram-bot",
+		"genius-api",
+		"lyrics",
+		"music",
+		"telegraf",
+		"express"
+	],
+	"contributors": [
+		{
+			"name": "Sanoy",
+			"email": "myonas886@gmail.com"
+		}
+	],
+	"bugs": {
+		"url": "https://github.com/sanoy24/genius-telegram-bot/issues",
+		"email": "myonas886@example.com"
+	},
+	"homepage": "https://github.com/sanoy24/genius-telegram-bot#readme",
+	"funding": {
+		"type": "patreon",
+		"url": "https://www.patreon.com/Sanoy24"
 	}
 }
