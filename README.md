@@ -94,7 +94,7 @@ You can deploy the bot to platforms like Vercel, Heroku, or any cloud provider t
 ├── bot.js                 # Main bot logic
 ├── fetch_lyrics.js        # Module for fetching and formatting lyrics
 ├── bot-actions.log        # Log file for bot events
-├── README.md              # This file
+├── README.md              # read me file for the project
 └── .env                   # Environment variables (not included in the repo)
 ```
 
