@@ -100,8 +100,8 @@ You can deploy the bot to platforms like Vercel, Heroku, or any cloud provider t
 
 ## License
 
-This project is licensed under the MIT License. See the [https://opensource.org/license/mit](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](https://opensource.org/license/mit) file for details.
 
 ## Contact
 
-For any questions or issues, feel free to contact me at [myonas86@gmail.com](Sanoy).
+For any questions or issues, feel free to contact me at [Sanoy](myonas86@gmail.com).
