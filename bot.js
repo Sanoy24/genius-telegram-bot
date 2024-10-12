@@ -1,9 +1,17 @@
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
-const { Telegraf } = require("telegraf");
+const { Telegraf, Markup } = require("telegraf");
 const fetchlyrics = require("./fetch_lyrics");
+const ytSearch = require("yt-search");
+const ytdl = require("ytdl-core");
+const youtubedl = require("youtube-dl-exec");
+const ffmpeg = require("ffmpeg");
 const winston = require("winston");
+const path = require("path");
+const fs = require("fs");
+const { exec } = require("child_process");
+const youtubeDl = require("youtube-dl-exec");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,24 +29,24 @@ const logger = winston.createLogger({
 });
 
 // Set the webhook URL
-const webhookUrl = `${process.env.WEBHOOK_URL}/api/bot/webhook`;
+// const webhookUrl = `${process.env.WEBHOOK_URL}/api/bot/webhook`;
 
-// Set webhook and start bot
-bot.telegram
-	.setWebhook(webhookUrl)
-	.then(() => {
-		console.log(`Webhook set to ${webhookUrl}`);
-		bot.launch(); // Ensure the bot is launched after setting the webhook
-	})
-	.catch((error) => {
-		console.error(`Failed to set webhook: ${error}`);
-	});
+// // Set webhook and start bot
+// bot.telegram
+// 	.setWebhook(webhookUrl)
+// 	.then(() => {
+// 		console.log(`Webhook set to ${webhookUrl}`);
+// 		bot.launch(); // Ensure the bot is launched after setting the webhook
+// 	})
+// 	.catch((error) => {
+// 		console.error(`Failed to set webhook: ${error}`);
+// 	});
 
-app.post("/api/bot/webhook", (req, res) => {
-	console.log("Webhook received:", req.body); // Log incoming requests
-	bot.handleUpdate(req.body); // Process the update using Telegraf
-	res.sendStatus(200); // Respond with a 200 OK
-});
+// app.post("/api/bot/webhook", (req, res) => {
+// 	console.log("Webhook received:", req.body); // Log incoming requests
+// 	bot.handleUpdate(req.body); // Process the update using Telegraf
+// 	res.sendStatus(200); // Respond with a 200 OK
+// });
 
 // Map to store song results with page and song information
 const songUrlMap = {};
@@ -66,10 +74,11 @@ bot.start((ctx) => {
 });
 
 // Handle messages from users
-bot.on("text", async (ctx) => {
+bot.command("lyrics", async (ctx) => {
 	const chatId = ctx.chat.id;
 	const username = ctx.from.username;
-	const songTitle = ctx.message.text;
+	const songTitle = ctx.message.text.replace("/lyrics", "").trim();
+	// console.log(songTitle);
 
 	// Log the text message event
 	logger.info({
@@ -80,9 +89,9 @@ bot.on("text", async (ctx) => {
 		message: songTitle,
 	});
 
-	if (songTitle.startsWith("/")) {
-		return; // Ignore command messages in the generic message handler
-	}
+	// if (songTitle.startsWith("/")) {
+	// 	return; // Ignore command messages in the generic message handler
+	// }
 
 	if (songTitle) {
 		try {
@@ -195,70 +204,156 @@ function sendPaginatedSongs(ctx, page) {
 	}
 }
 
-// Handle callback queries
-bot.on("callback_query", async (ctx) => {
-	const callbackData = ctx.callbackQuery.data;
-	const chatId = ctx.chat.id;
-	const username = ctx.from.username;
+// // Handle callback queries
+// bot.on("callback_query", async (ctx) => {
+// 	const callbackData = ctx.callbackQuery.data;
+// 	const chatId = ctx.chat.id;
+// 	const username = ctx.from.username;
+// 	// console.log("call_back_query", ctx.callbackQuery);
 
-	// Log callback event
-	logger.info({
-		event: "callback_query",
-		user_id: chatId,
-		username: username,
-		callback_data: callbackData,
-		song_url: songUrlMap[callbackData],
-		timestamp: new Date().toISOString(),
-	});
+// 	// Log callback event
+// 	logger.info({
+// 		event: "callback_query",
+// 		user_id: chatId,
+// 		username: username,
+// 		callback_data: callbackData,
+// 		song_url: songUrlMap[callbackData],
+// 		timestamp: new Date().toISOString(),
+// 	});
 
-	// Acknowledge the callback query to remove the button highlight
-	await ctx.answerCbQuery();
+// 	// Acknowledge the callback query to remove the button highlight
+// 	await ctx.answerCbQuery();
 
-	if (callbackData.startsWith("page_")) {
-		const page = parseInt(callbackData.split("_")[1], 10);
-		sendPaginatedSongs(ctx, page); // Send the corresponding page
-	} else if (callbackData.startsWith("song_")) {
-		const songId = callbackData;
-		const songData = songUrlMap[songId];
+// 	if (callbackData.startsWith("page_")) {
+// 		const page = parseInt(callbackData.split("_")[1], 10);
+// 		sendPaginatedSongs(ctx, page); // Send the corresponding page
+// 	} else if (callbackData.startsWith("song_")) {
+// 		const songId = callbackData;
+// 		// console.log(songUrlMap);
+// 		const songData = songUrlMap[songId];
 
-		if (songData && songData.url) {
-			try {
-				// Send the "Fetching lyrics..." message and store its reference
-				const fetchingMessage = await ctx.reply("Fetching lyrics...");
+// 		if (songData && songData.url) {
+// 			try {
+// 				// Send the "Fetching lyrics..." message and store its reference
+// 				const fetchingMessage = await ctx.reply("Fetching lyrics...");
 
-				// Fetch the lyrics for the selected song
-				const lyrics = await fetchlyrics.fetchLyrics(songData.url);
-				const formattedLyrics = fetchlyrics.formatLyrics(lyrics);
-				const lyricParts = fetchlyrics.splitMessage(formattedLyrics);
+// 				// Fetch the lyrics for the selected song
+// 				const lyrics = await fetchlyrics.fetchLyrics(songData.url);
+// 				const formattedLyrics = fetchlyrics.formatLyrics(lyrics);
+// 				const lyricParts = fetchlyrics.splitMessage(formattedLyrics);
 
-				// Send the song's thumbnail
-				if (songData.thumbnail) {
-					await ctx.replyWithPhoto(songData.thumbnail, {
-						caption: "Here's the song thumbnail!",
-					});
-				}
+// 				// Send the song's thumbnail
+// 				if (songData.thumbnail) {
+// 					await ctx.replyWithPhoto(songData.thumbnail, {
+// 						caption: "Here's the song thumbnail!",
+// 					});
+// 				}
 
-				// Send the lyrics in parts
-				for (const part of lyricParts) {
-					await ctx.reply(part, { parse_mode: "Markdown" });
-				}
+// 				// Send the lyrics in parts
+// 				for (const part of lyricParts) {
+// 					await ctx.reply(part, { parse_mode: "Markdown" });
+// 				}
 
-				// Delete the "Fetching lyrics..." message
-				await ctx.telegram.deleteMessage(ctx.chat.id, fetchingMessage.message_id);
-			} catch (error) {
-				logger.error({
-					event: "lyrics_fetch_error",
-					user_id: chatId,
-					username: username,
-					song: songData.url,
-					error: error.message,
-					timestamp: new Date().toISOString(),
-				});
-				await ctx.reply("There was an error fetching the lyrics for this song.");
-			}
-		} else {
-			await ctx.reply("Error: Invalid song selection.");
+// 				// Delete the "Fetching lyrics..." message
+// 				await ctx.telegram.deleteMessage(ctx.chat.id, fetchingMessage.message_id);
+// 			} catch (error) {
+// 				logger.error({
+// 					event: "lyrics_fetch_error",
+// 					user_id: chatId,
+// 					username: username,
+// 					song: songData.url,
+// 					error: error.message,
+// 					timestamp: new Date().toISOString(),
+// 				});
+// 				await ctx.reply("There was an error fetching the lyrics for this song.");
+// 			}
+// 		} else {
+// 			await ctx.reply("Error: Invalid song selection.");
+// 		}
+// 	}
+// });
+
+// Command to handle song search and inline button creation
+bot.command("download", async (ctx) => {
+	const query = ctx.message.text.replace("/download", "").trim();
+	console.log("Received command with query:", query);
+
+	if (!query) {
+		return ctx.reply("Please provide a song name. Usage: /download <song name>");
+	}
+
+	try {
+		const searchResult = await ytSearch(query);
+		if (!searchResult || searchResult.videos.length === 0) {
+			return ctx.reply("No results found for your search. Please try a different song name.");
 		}
+
+		const inlineKeyboard = searchResult.videos.slice(0, 10).map((video) => {
+			return [Markup.button.callback(video.title, `download_${video.videoId}`)];
+		});
+
+		console.log("Sending inline keyboard:", inlineKeyboard);
+		await ctx.reply("Please choose a song to download:", Markup.inlineKeyboard(inlineKeyboard));
+	} catch (error) {
+		console.error("Error during search or reply:", error);
+		ctx.reply("An error occurred while processing your request.");
+	}
+});
+
+// General callback handler to see if the bot is receiving any callback queries at all
+
+// More general regex to test if download actions are working
+
+// Bot action for handling song download when an inline button is clicked
+// const youtubedl = require('youtube-dl-exec');
+// const path = require('path');
+// const fs = require('fs');
+
+// Bot action for handling song download when an inline button is clicked
+const sanitize = (filename) => {
+	return filename.replace(/[<>:"/\\|?*]/g, "_");
+};
+
+// Action to handle the download request from an inline button
+bot.action(/^download_(.+)/, async (ctx) => {
+	const videoId = ctx.match[1];
+	const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+	try {
+		// Acknowledge the callback query
+		await ctx.answerCbQuery();
+
+		// Inform the user that the download is starting
+		await ctx.reply("Processing your request, downloading the audio...");
+
+		// Use youtube-dl-exec to get the video information
+		const info = await youtubeDl(youtubeUrl, {
+			dumpSingleJson: true,
+		});
+
+		// Sanitize the video title and prepare paths
+		const videoTitle = sanitize(info.title);
+		const tempFilePath = path.resolve(__dirname, `${videoTitle}.webm`); // Temporary .webm file
+		const audioFilePath = path.resolve(__dirname, `${videoTitle}.mp3`); // Final MP3 file
+
+		// Start downloading the audio
+		await youtubeDl(youtubeUrl, {
+			extractAudio: true,
+			audioFormat: "mp3",
+			output: tempFilePath, // Save it temporarily as .webm or .mp3
+		});
+
+		// Inform the user that the download is complete and the file is being sent
+		await ctx.reply(`Download complete, sending audio: ${videoTitle}...`);
+
+		// Send the audio file
+		await ctx.replyWithAudio({ source: tempFilePath });
+
+		// Clean up the temporary file after sending
+		fs.unlinkSync(tempFilePath);
+	} catch (error) {
+		console.error("Error during download process:", error);
+		ctx.reply("An error occurred while processing your request.");
 	}
 });
 
@@ -272,3 +367,5 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
 	logger.info({ event: "server_start", message: `App listening on port ${PORT}` });
 });
+
+bot.launch();
