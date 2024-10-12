@@ -375,4 +375,4 @@ app.listen(PORT, () => {
 	logger.info({ event: "server_start", message: `App listening on port ${PORT}` });
 });
 
-bot.launch();
+// bot.launch();
