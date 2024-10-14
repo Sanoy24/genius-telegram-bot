@@ -27,6 +27,24 @@ const logger = winston.createLogger({
 	],
 });
 
+const clientId = process.env.SPOTIFY_CLIENT_ID;
+const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+
+// Function to get Spotify Access Token
+async function getSpotifyAccessToken() {
+	const response = await axios.post("https://accounts.spotify.com/api/token", null, {
+		headers: {
+			"Content-Type": "application/x-www-form-urlencoded",
+			Authorization: "Basic " + Buffer.from(`${clientId}:${clientSecret}`).toString("base64"),
+		},
+		params: {
+			grant_type: "client_credentials",
+		},
+	});
+	console.log(response.data.access_token);
+	return response.data.access_token;
+}
+
 // const webhookUrl = `${process.env.WEBHOOK_URL}/api/bot/webhook`;
 
 // // Set webhook and start bot
@@ -471,9 +489,43 @@ bot.action(/^downloadvideo_(.+)/, async (ctx) => {
 	}
 });
 
+bot.command("trending_music", async (ctx) => {
+	try {
+		const accessToken = await getSpotifyAccessToken();
+
+		// Fetch trending tracks (Top 50 Global)
+		const response = await axios.get(
+			"https://api.spotify.com/v1/playlists/37i9dQZEVXbMDoHDwVN2tF",
+			{
+				headers: {
+					Authorization: `Bearer ${accessToken}`,
+				},
+			},
+		);
+
+		const tracks = response.data.tracks.items.slice(0, 10); // Get the top 10 tracks
+		let message = "🎵 *Trending Music Charts (Top 10)* 🎵\n\n";
+
+		tracks.forEach((track, index) => {
+			message += `${index + 1}. *${track.track.name}* by *${track.track.artists
+				.map((artist) => artist.name)
+				.join(", ")}*\n`;
+			message += `[Listen on Spotify](${track.track.external_urls.spotify})\n\n`;
+		});
+
+		ctx.replyWithMarkdown(message);
+	} catch (error) {
+		console.error("Error fetching trending music:", error);
+		ctx.reply("Sorry, I couldn't fetch the trending music right now. Please try again later.");
+	}
+});
+
 // Start the Express server
-app.listen(PORT, () => {
-	logger.info({ event: "server_start", message: `App listening on port ${PORT}` });
+app.listen(process.env.PORT || PORT, () => {
+	logger.info({
+		event: "server_start",
+		message: `App listening on port ${process.env.PORT ? process.env.PORT : PORT}`,
+	});
 });
 
 bot.launch();
