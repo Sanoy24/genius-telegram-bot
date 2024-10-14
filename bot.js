@@ -27,18 +27,36 @@ const logger = winston.createLogger({
 	],
 });
 
-const webhookUrl = `${process.env.WEBHOOK_URL}/api/bot/webhook`;
+const clientId = process.env.SPOTIFY_CLIENT_ID;
+const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
-// Set webhook and start bot
-bot.telegram
-	.setWebhook(webhookUrl)
-	.then(() => {
-		console.log(`Webhook set to ${webhookUrl}`);
-		bot.launch(); // Ensure the bot is launched after setting the webhook
-	})
-	.catch((error) => {
-		console.error(`Failed to set webhook: ${error}`);
+// Function to get Spotify Access Token
+async function getSpotifyAccessToken() {
+	const response = await axios.post("https://accounts.spotify.com/api/token", null, {
+		headers: {
+			"Content-Type": "application/x-www-form-urlencoded",
+			Authorization: "Basic " + Buffer.from(`${clientId}:${clientSecret}`).toString("base64"),
+		},
+		params: {
+			grant_type: "client_credentials",
+		},
 	});
+	console.log(response.data.access_token);
+	return response.data.access_token;
+}
+
+// const webhookUrl = `${process.env.WEBHOOK_URL}/api/bot/webhook`;
+
+// // Set webhook and start bot
+// bot.telegram
+// 	.setWebhook(webhookUrl)
+// 	.then(() => {
+// 		console.log(`Webhook set to ${webhookUrl}`);
+// 		bot.launch(); // Ensure the bot is launched after setting the webhook
+// 	})
+// 	.catch((error) => {
+// 		console.error(`Failed to set webhook: ${error}`);
+// 	});
 
 app.post("/api/bot/webhook", (req, res) => {
 	console.log("Webhook received:", req.body);
@@ -105,7 +123,7 @@ bot.command("lyrics", async (ctx) => {
 
 			// Store results in Redis and send the first page
 			if (hits.length > 0) {
-				await redis.setex(`song_hits:${chatId}`, 2592000, JSON.stringify(hits)); // Expire after 1 hour
+				await redis.setex(`song_hits:${chatId}`, 2592000, JSON.stringify(hits)); // Expire after 1 month
 				sendPaginatedSongs(ctx, 0); // Send the first page (page 0)
 			} else {
 				ctx.reply(`Sorry, I couldn't find any matching songs.`);
@@ -370,9 +388,144 @@ app.get("/", (req, res) => {
 	res.send("This is a starting point...");
 });
 
+// Command for downloading videos
+bot.command("downloadvideo", async (ctx) => {
+	const query = ctx.message.text.replace("/downloadvideo", "").trim();
+	console.log("Received video download command with query:", query);
+
+	if (!query) {
+		return ctx.reply("Please provide a video name or URL. Usage: /downloadvideo <video name>");
+	}
+
+	try {
+		const searchResult = await ytSearch(query);
+		if (!searchResult || searchResult.videos.length === 0) {
+			return ctx.reply(
+				"No video results found for your search. Please try a different query.",
+			);
+		}
+
+		const inlineKeyboard = searchResult.videos.slice(0, 10).map((video) => {
+			return [Markup.button.callback(video.title, `downloadvideo_${video.videoId}`)];
+		});
+
+		console.log("Sending inline keyboard for video selection:", inlineKeyboard);
+		await ctx.reply(
+			"Please choose a video to download:",
+			Markup.inlineKeyboard(inlineKeyboard),
+		);
+	} catch (error) {
+		console.error("Error during video search or reply:", error);
+		ctx.reply("An error occurred while processing your request.");
+	}
+});
+
+// Action to handle video download request from an inline button
+// Action to handle video download request from an inline button
+bot.action(/^downloadvideo_(.+)/, async (ctx) => {
+	const userId = ctx.from.id;
+
+	if (processing[userId]) {
+		return ctx.reply("You're already processing a request. Please wait.");
+	}
+	processing[userId] = true;
+
+	const videoId = ctx.match[1];
+	const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+	try {
+		// Acknowledge the callback query
+		await ctx.answerCbQuery();
+
+		// Inform the user that the video download is starting
+		const processingRequest = await ctx.reply(
+			"Processing your request, downloading the video...",
+		);
+
+		// Use youtube-dl-exec to get the video information and download it
+		const videoInfo = await youtubeDl(youtubeUrl, {
+			dumpSingleJson: true,
+		});
+
+		// Sanitize the video title and prepare paths
+		const videoTitle = sanitize(videoInfo.title);
+		const videoFilePath = path.resolve(__dirname, `${videoTitle}.mp4`); // Use .mp4 extension
+
+		// Log the file path for debugging
+		console.log("Downloading video to path:", videoFilePath);
+
+		// Start downloading the video
+		await youtubeDl(youtubeUrl, {
+			format: "best", // Use 'best' format for video
+			output: videoFilePath, // Save the video as .mp4
+		});
+
+		// Check if the .mp4 file exists
+		if (!fs.existsSync(videoFilePath)) {
+			throw new Error(`Video file not found: ${videoFilePath}`);
+		}
+
+		// Inform the user that the download is complete and the file is being sent
+		const completeVideoMessage = await ctx.reply(
+			`Download complete, sending video file: ${videoTitle}...`,
+		);
+
+		ctx.telegram.deleteMessage(ctx.chat.id, processingRequest.message_id);
+		ctx.telegram.deleteMessage(ctx.chat.id, completeVideoMessage.message_id);
+
+		// Explicitly send the video as a document
+		await ctx.telegram.sendDocument(ctx.chat.id, {
+			source: videoFilePath,
+			filename: `${videoTitle}.mp4`, // Display it as .mp4 for user convenience
+		});
+
+		// Clean up the temporary file after sending
+		fs.unlinkSync(videoFilePath);
+	} catch (error) {
+		console.error("Error during video download process:", error);
+		ctx.reply("An error occurred while processing your video request.");
+	} finally {
+		delete processing[userId];
+	}
+});
+
+bot.command("trending_music", async (ctx) => {
+	try {
+		const accessToken = await getSpotifyAccessToken();
+
+		// Fetch trending tracks (Top 50 Global)
+		const response = await axios.get(
+			"https://api.spotify.com/v1/playlists/37i9dQZEVXbMDoHDwVN2tF",
+			{
+				headers: {
+					Authorization: `Bearer ${accessToken}`,
+				},
+			},
+		);
+
+		const tracks = response.data.tracks.items.slice(0, 10); // Get the top 10 tracks
+		let message = "🎵 *Trending Music Charts (Top 10)* 🎵\n\n";
+
+		tracks.forEach((track, index) => {
+			message += `${index + 1}. *${track.track.name}* by *${track.track.artists
+				.map((artist) => artist.name)
+				.join(", ")}*\n`;
+			message += `[Listen on Spotify](${track.track.external_urls.spotify})\n\n`;
+		});
+
+		ctx.replyWithMarkdown(message);
+	} catch (error) {
+		console.error("Error fetching trending music:", error);
+		ctx.reply("Sorry, I couldn't fetch the trending music right now. Please try again later.");
+	}
+});
+
 // Start the Express server
-app.listen(PORT, () => {
-	logger.info({ event: "server_start", message: `App listening on port ${PORT}` });
+app.listen(process.env.PORT || PORT, () => {
+	logger.info({
+		event: "server_start",
+		message: `App listening on port ${process.env.PORT ? process.env.PORT : PORT}`,
+	});
 });
 
 // bot.launch();
