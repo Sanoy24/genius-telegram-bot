@@ -1,58 +1,58 @@
 {
-	"name": "genius-telegram-bot",
-	"version": "1.0.0",
-	"description": "A Telegram bot that fetches song lyrics from the Genius API, providing interactive responses and pagination support.",
-	"main": "bot.js",
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "node bot.js",
-		"dev": "nodemon bot.js"
-	},
-	"author": "Sanoy",
-	"license": "MIT",
-	"engines": {
-		"node": ">=16.0.0"
-	},
-	"dependencies": {
-		"axios": "^1.7.7",
-		"cheerio": "^1.0.0",
-		"dotenv": "^16.4.5",
-		"express": "^4.21.1",
-		"ffmpeg-static": "^5.2.0",
-		"fluent-ffmpeg": "^2.1.3",
-		"ioredis": "^5.4.1",
-		"nodemon": "^3.1.7",
-		"sanitize-filename": "^1.6.3",
-		"telegraf": "^4.16.3",
-		"winston": "^3.15.0",
-		"youtube-dl-exec": "^3.0.10",
-		"yt-search": "^2.12.1"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/sanoy24/genius-telegram-bot"
-	},
-	"keywords": [
-		"telegram-bot",
-		"genius-api",
-		"lyrics",
-		"music",
-		"telegraf",
-		"express"
-	],
-	"contributors": [
-		{
-			"name": "Sanoy",
-			"email": "myonas886@gmail.com"
-		}
-	],
-	"bugs": {
-		"url": "https://github.com/sanoy24/genius-telegram-bot/issues",
-		"email": "myonas886@example.com"
-	},
-	"homepage": "https://github.com/sanoy24/genius-telegram-bot#readme",
-	"funding": {
-		"type": "patreon",
-		"url": "https://www.patreon.com/Sanoy24"
-	}
+    "name": "genius-telegram-bot",
+    "version": "1.0.0",
+    "description": "A Telegram bot that fetches song lyrics from the Genius API, providing interactive responses and pagination support.",
+    "main": "bot.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "node bot.js",
+        "dev": "nodemon bot.js"
+    },
+    "author": "Sanoy",
+    "license": "MIT",
+    "engines": {
+        "node": ">=16.0.0"
+    },
+    "dependencies": {
+        "axios": "^1.15.0",
+        "cheerio": "^1.0.0",
+        "dotenv": "^16.4.5",
+        "express": "^4.21.1",
+        "ffmpeg-static": "^5.2.0",
+        "fluent-ffmpeg": "^2.1.3",
+        "ioredis": "^5.4.1",
+        "nodemon": "^3.1.7",
+        "sanitize-filename": "^1.6.3",
+        "telegraf": "^4.16.3",
+        "winston": "^3.15.0",
+        "youtube-dl-exec": "^3.0.10",
+        "youtube-search-api": "^2.0.1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sanoy24/genius-telegram-bot"
+    },
+    "keywords": [
+        "telegram-bot",
+        "genius-api",
+        "lyrics",
+        "music",
+        "telegraf",
+        "express"
+    ],
+    "contributors": [
+        {
+            "name": "Sanoy",
+            "email": "myonas886@gmail.com"
+        }
+    ],
+    "bugs": {
+        "url": "https://github.com/sanoy24/genius-telegram-bot/issues",
+        "email": "myonas886@example.com"
+    },
+    "homepage": "https://github.com/sanoy24/genius-telegram-bot#readme",
+    "funding": {
+        "type": "patreon",
+        "url": "https://www.patreon.com/Sanoy24"
+    }
 }
